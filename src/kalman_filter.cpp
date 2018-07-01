@@ -1,5 +1,7 @@
 #include "kalman_filter.h"
+#include <iostream>
 
+using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
@@ -58,20 +60,39 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
     * update the state by using Extended Kalman Filter equations
   */
 
+  float px = x_(0);
+  float py = x_(1);
+  float vx = x_(2);
+  float vy = x_(3);
 
+  float eq1 = sqrt(px*px + py*py);
+/**
+  if(eq1 < 0.00001) {
+    px += 0.001;
+    py += 0.001;
+    eq1 = sqrt(px*px + py*py);
+  }
+*/
+  float eq2 = atan2(py,px);
 
-  float rho = sqrt(x_(0) * x_(0) + x_(1) *  x_(1));
-  float phi = atan2(x_(1), x_(0));
-  float rho_dot;
-  if (fabs(rho) < 0.0001) {
-    rho_dot = 0;
-  } else {
-    rho_dot = (x_(0) * x_(2) + x_(1) * x_(3)) / rho;
+  float eq3 = 0;
+  if (fabs(eq1) > 0.0001) {
+    eq3 = (px*vx + py*vy)/eq1;
   }
 
   VectorXd z_pred(3);
-  z_pred << rho, phi, rho_dot;
+  z_pred << eq1, eq2, eq3;
+
   VectorXd y = z - z_pred;
+
+  cout << "--y(1) before " << y(1) << endl;
+
+  while (y(1) > M_PI) y(1) -= 2.0*M_PI;
+  while (y(1) < -M_PI) y(1) += 2.0*M_PI;
+
+  cout << "--y(1) after " << y(1) << endl;
+
+
   MatrixXd Ht = H_.transpose();
   MatrixXd S = H_ * P_ * Ht + R_;
   MatrixXd Si = S.inverse();
